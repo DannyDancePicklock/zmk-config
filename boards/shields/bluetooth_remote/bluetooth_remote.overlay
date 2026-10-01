@@ -1,14 +1,9 @@
-// This file was generated from a template. Edit it to match your keyboard.
-// See https://zmk.dev/docs/development/hardware-integration/new-shield for more
-// instructions.
-
 #include <dt-bindings/zmk/matrix_transform.h>
-
-#include "bluetooth_remote-layouts.dtsi"
 
 / {
     chosen {
-        zmk,physical-layout = &default_layout;
+        zmk,kscan = &kscan;
+        zmk,matrix-transform = &default_transform;
     };
 
     kscan: kscan {
