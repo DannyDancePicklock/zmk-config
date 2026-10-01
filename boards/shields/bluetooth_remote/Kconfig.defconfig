@@ -1,0 +1,6 @@
+if SHIELD_BLUETOOTH_REMOTE
+
+config ZMK_KEYBOARD_NAME
+    default "Bluetooth Remote"
+
+endif # SHIELD_BLUETOOTH_REMOTE
