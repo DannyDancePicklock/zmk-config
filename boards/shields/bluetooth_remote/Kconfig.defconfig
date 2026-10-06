@@ -3,16 +3,4 @@ if SHIELD_BLUETOOTH_REMOTE
 config ZMK_KEYBOARD_NAME
     default "BT Remote"
 
-config EC11
-    default y
-
-config EC11_TRIGGER_GLOBAL_THREAD
-    default y
-
-config ZMK_SLEEP
-    default y
-
-config ZMK_IDLE_SLEEP_TIMEOUT
-    default 7200000
-
 endif # SHIELD_BLUETOOTH_REMOTE
