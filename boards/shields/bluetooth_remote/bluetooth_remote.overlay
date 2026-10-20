@@ -42,4 +42,12 @@
         sensors = <&wheel_encoder>;
         triggers-per-rotation = <20>;
     };
+
+    /* Status-LED an D9 (P1.06): D9 -> 220 Ohm -> LED Anode, Kathode -> GND */
+    status_leds {
+        compatible = "gpio-leds";
+        status_led: status_led {
+            gpios = <&pro_micro 9 GPIO_ACTIVE_HIGH>;
+        };
+    };
 };

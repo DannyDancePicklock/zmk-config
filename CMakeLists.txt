@@ -1,0 +1,1 @@
+target_sources_ifdef(CONFIG_BT_REMOTE_STATUS_LED app PRIVATE src/status_led.c)

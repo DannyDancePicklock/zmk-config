@@ -1,0 +1,14 @@
+config BT_REMOTE_STATUS_LED
+    bool "Status-LED: blinkt beim Verbinden und im Kopplungsmodus"
+
+if BT_REMOTE_STATUS_LED
+
+config BT_REMOTE_STATUS_LED_CONNECT_MS
+    int "Dauer des einmaligen Aufleuchtens nach dem Verbinden (ms)"
+    default 300
+
+config BT_REMOTE_STATUS_LED_PAIRING_MS
+    int "Halbe Periode des schnellen Blinkens im Kopplungsmodus (ms)"
+    default 100
+
+endif
