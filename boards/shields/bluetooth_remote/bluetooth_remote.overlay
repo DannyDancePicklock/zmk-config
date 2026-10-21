@@ -1,20 +1,52 @@
 #include <dt-bindings/zmk/matrix_transform.h>
 
+/*
+ * Pinbelegung BT Remote (nice!nano / SuperMini nRF52840)
+ *
+ *   Encoder A   D9   (P1.06)
+ *   Encoder B   D8   (P1.04)
+ *   Play/Pause  D7   (P0.11)
+ *   Leiser      D6   (P1.00)
+ *   Weiter      D5   (P0.24)
+ *   Lauter      D4   (P0.22)
+ *   Zurueck     D3   (P0.20)
+ *
+ *   RGB-LED rot  D10 (P0.09, NFC-Pin)
+ *   RGB-LED gruen D16 (P0.10, NFC-Pin)
+ *   RGB-LED blau D14 (P1.11)
+ */
+
+/*
+ * RGB-LED-Typ:
+ *   Gemeinsame Anode  (langes Bein an 3,3 V)  -> GPIO_ACTIVE_LOW
+ *   Gemeinsame Kathode (langes Bein an GND)   -> GPIO_ACTIVE_HIGH
+ * Jede Farbe bekommt ihren eigenen Vorwiderstand.
+ */
+#define RGB_LED_ACTIVE GPIO_ACTIVE_LOW
+
+/* D10 und D16 sind beim nRF52840 die NFC-Pins (P0.09/P0.10).
+ * Damit sie als normale GPIOs funktionieren, muss NFC abgeschaltet werden. */
+&uicr {
+    nfct-pins-as-gpios;
+};
+
 / {
     chosen {
         zmk,kscan = &kscan;
         zmk,matrix-transform = &default_transform;
     };
 
+    /* Reihenfolge = Tastenposition in der Keymap:
+     * 0 Play, 1 Zurueck, 2 Weiter, 3 Lauter, 4 Leiser */
     kscan: kscan {
         compatible = "zmk,kscan-gpio-direct";
         wakeup-source;
 
         input-gpios
-            = <&pro_micro 2 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
+            = <&pro_micro 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
             , <&pro_micro 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
-            , <&pro_micro 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
             , <&pro_micro 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
+            , <&pro_micro 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
             , <&pro_micro 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
             ;
     };
@@ -31,8 +63,8 @@
 
     wheel_encoder: wheel_encoder {
         compatible = "alps,ec11";
-        a-gpios = <&pro_micro 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        b-gpios = <&pro_micro 1 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        a-gpios = <&pro_micro 9 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        b-gpios = <&pro_micro 8 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
         steps = <80>;
         status = "okay";
     };
@@ -43,11 +75,17 @@
         triggers-per-rotation = <20>;
     };
 
-    /* Status-LED an D9 (P1.06): D9 -> 220 Ohm -> LED Anode, Kathode -> GND */
+    /* Status-RGB-LED: blau = Kopplungsmodus, gruen = verbunden, rot = Akku schwach */
     status_leds {
         compatible = "gpio-leds";
-        status_led: status_led {
-            gpios = <&pro_micro 9 GPIO_ACTIVE_HIGH>;
+        led_red: led_red {
+            gpios = <&pro_micro 10 RGB_LED_ACTIVE>;
+        };
+        led_green: led_green {
+            gpios = <&pro_micro 16 RGB_LED_ACTIVE>;
+        };
+        led_blue: led_blue {
+            gpios = <&pro_micro 14 RGB_LED_ACTIVE>;
         };
     };
 };

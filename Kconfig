@@ -1,14 +1,27 @@
 config BT_REMOTE_STATUS_LED
-    bool "Status-LED: blinkt beim Verbinden und im Kopplungsmodus"
+    bool "RGB-Status-LED: blau Kopplungsmodus, gruen verbunden, rot Akku schwach"
+    depends on ZMK_BATTERY_REPORTING
 
 if BT_REMOTE_STATUS_LED
 
 config BT_REMOTE_STATUS_LED_CONNECT_MS
-    int "Dauer des einmaligen Aufleuchtens nach dem Verbinden (ms)"
+    int "Dauer des gruenen Aufleuchtens nach dem Verbinden (ms)"
     default 300
 
 config BT_REMOTE_STATUS_LED_PAIRING_MS
-    int "Halbe Periode des schnellen Blinkens im Kopplungsmodus (ms)"
+    int "Halbe Periode des blauen Blinkens im Kopplungsmodus (ms)"
     default 100
+
+config BT_REMOTE_STATUS_LED_LOWBAT_PERCENT
+    int "Akku-Warnung ab diesem Ladestand (%)"
+    default 15
+
+config BT_REMOTE_STATUS_LED_LOWBAT_FLASH_MS
+    int "Dauer des roten Blitzes bei schwachem Akku (ms)"
+    default 100
+
+config BT_REMOTE_STATUS_LED_LOWBAT_INTERVAL_S
+    int "Abstand der roten Blitze bei schwachem Akku (s)"
+    default 10
 
 endif
