@@ -4,7 +4,7 @@
  * Pinbelegung BT Remote (nice!nano / SuperMini nRF52840)
  *
  *   Encoder A   D9   (P1.06)
- *   Encoder B   D8   (P1.04)
+ *   Encoder B   D2   (P0.17)
  *   Play/Pause  D7   (P0.11)
  *   Leiser      D6   (P1.00)
  *   Weiter      D5   (P0.24)
@@ -64,7 +64,7 @@
     wheel_encoder: wheel_encoder {
         compatible = "alps,ec11";
         a-gpios = <&pro_micro 9 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        b-gpios = <&pro_micro 8 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        b-gpios = <&pro_micro 2 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
         steps = <80>;
         status = "okay";
     };
