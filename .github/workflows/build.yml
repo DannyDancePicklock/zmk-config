@@ -112,7 +112,7 @@ jobs:
         working-directory: ${{ env.base_dir }}
         run: |
           sed -i '/select BT_SMP_SC_PAIR_ONLY/d' zmk/app/Kconfig
-          if grep -q "BT_SMP_SC_PAIR_ONLY" zmk/app/Kconfig; then
+          if grep -q "select BT_SMP_SC_PAIR_ONLY" zmk/app/Kconfig; then
             echo "Patch fehlgeschlagen" && exit 1
           fi
           echo "BT_SMP_SC_PAIR_ONLY aus ZMK entfernt"
