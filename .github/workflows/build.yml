@@ -152,7 +152,9 @@ jobs:
       - name: Check Kopplungsmodus-Code in der Firmware
         run: |
           cfg="${{ env.build_dir }}/zephyr/.config"
-          elf="${{ env.build_dir }}/zephyr/zephyr.elf"
+          elf="${{ env.build_dir }}/zephyr/zmk.elf"
+          [ -f "$elf" ] || elf="${{ env.build_dir }}/zephyr/zephyr.elf"
+          echo "::notice title=ELF::$elf"
           if ! grep -q "^CONFIG_BT_REMOTE_PAIRING_WINDOW=y" "$cfg"; then
             echo "Kopplungsmodus-Modul nicht aktiv in diesem Build, Pruefung uebersprungen"; exit 0
           fi
