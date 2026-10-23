@@ -20,4 +20,5 @@
 ---
   include:
   - board: nice_nano_v2
-    shield: bluetooth_remote
+    shield: bluetooth_remote  - board: nice_nano_v2
+    shield: settings_reset
