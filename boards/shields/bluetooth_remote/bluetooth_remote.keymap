@@ -1,7 +1,6 @@
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
-#include <dt-bindings/zmk/reset.h>
 
 / {
     behaviors {
@@ -13,28 +12,6 @@
             flavor = "tap-preferred";
             tapping-term-ms = <2000>;
             bindings = <&bt>, <&none>;
-        };
-
-        /* Kompletter Neustart der Kopplung: alle gespeicherten PCs
-         * loeschen, kurz warten, dann neu booten. */
-        pairing_reset: pairing_reset {
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings
-                = <&macro_tap &bt BT_CLR_ALL>
-                , <&macro_wait_time 300>
-                , <&macro_tap &sys_reset>
-                ;
-        };
-
-        /* Play: kurz = Play/Pause (wird beim Loslassen gesendet),
-         * 2 s halten = Kopplung zuruecksetzen */
-        play_reset: play_reset {
-            compatible = "zmk,behavior-hold-tap";
-            #binding-cells = <2>;
-            flavor = "tap-preferred";
-            tapping-term-ms = <2000>;
-            bindings = <&pairing_reset>, <&kp>;
         };
     };
 
@@ -54,7 +31,7 @@
 
         default_layer {
             bindings = <
-                &play_reset 0 C_PP   &kp C_PREV   &kp C_NEXT   &kp C_VOL_UP   &kp C_VOL_DN
+                &kp C_PP   &kp C_PREV   &kp C_NEXT   &kp C_VOL_UP   &kp C_VOL_DN
             >;
 
             sensor-bindings = <&inc_dec_kp KP_MINUS KP_PLUS>;
