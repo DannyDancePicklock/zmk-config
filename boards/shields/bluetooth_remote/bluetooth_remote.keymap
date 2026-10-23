@@ -3,13 +3,26 @@
 #include <dt-bindings/zmk/bt.h>
 
 / {
+    behaviors {
+        /* Kopplung loeschen erst nach 2 s Halten.
+         * Kurz gedrueckt passiert nichts (tap = &none). */
+        bt_clr_hold: bt_clr_hold {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "tap-preferred";
+            tapping-term-ms = <2000>;
+            bindings = <&bt>, <&none>;
+        };
+    };
+
     combos {
         compatible = "zmk,combos";
 
+        /* Kopplungsmodus: Play + Lauter zusammen 2 s halten */
         combo_bt_clear {
             timeout-ms = <150>;
-            key-positions = <0 1 2>;
-            bindings = <&bt BT_CLR>;
+            key-positions = <0 3>;
+            bindings = <&bt_clr_hold BT_CLR 0>;
         };
     };
 
