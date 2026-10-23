@@ -132,6 +132,10 @@ jobs:
             echo "SC_PAIR_ONLY ist noch aktiv" && exit 1
           fi
           echo "Legacy Pairing erlaubt"
+          for k in BT_DEVICE_NAME ZMK_KEYBOARD_NAME BT_SMP_SC_PAIR_ONLY BT_CTLR_PHY_2M BT_SMP BT_DEVICE_NAME_DYNAMIC; do
+            v=$(grep -E "^(# )?CONFIG_${k}[= ]" "${{ env.build_dir }}/zephyr/.config" | head -1)
+            echo "::notice title=${k}::${v:-nicht gesetzt}"
+          done
 
       - name: ${{ env.display_name }} Kconfig file
         run: |
