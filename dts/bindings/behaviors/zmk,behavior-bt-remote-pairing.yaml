@@ -1,0 +1,5 @@
+description: BT Remote - Kopplungsmodus starten (alter PC wird geloescht)
+
+compatible: "zmk,behavior-bt-remote-pairing"
+
+include: zero_param.yaml

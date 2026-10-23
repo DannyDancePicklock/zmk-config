@@ -108,9 +108,13 @@ jobs:
         working-directory: ${{ env.base_dir }}
         run: west update --fetch-opt=--filter=tree:0
 
-      - name: Patch ZMK - Legacy Pairing erlauben
+      - name: Patch ZMK - Kopplungsmodus und Legacy Pairing
         working-directory: ${{ env.base_dir }}
         run: |
+          # 1) Kopplungsmodus nur per Kombi (Hook im ZMK-Advertising)
+          git -C zmk apply --verbose "${GITHUB_WORKSPACE}/patches/zmk-v0.3-pairing-window.patch"
+          grep -q "zmk_ble_open_profile_adv_allowed" zmk/app/src/ble.c || { echo "Pairing-Patch fehlt"; exit 1; }
+          # 2) Legacy Pairing erlauben (alte Bluetooth-Chips)
           sed -i '/select BT_SMP_SC_PAIR_ONLY/d' zmk/app/Kconfig
           if grep -q "select BT_SMP_SC_PAIR_ONLY" zmk/app/Kconfig; then
             echo "Patch fehlgeschlagen" && exit 1
@@ -124,7 +128,15 @@ jobs:
       - name: West Build (${{ env.display_name }})
         working-directory: ${{ env.base_dir }}
         shell: sh -x {0}
-        run: west build -s zmk/app -d "${{ env.build_dir }}" -b "${{ matrix.board }}" ${{ env.extra_west_args }} -- -DZMK_CONFIG=${{ env.base_dir }}/${{ env.CONFIG_PATH }} ${{ env.extra_cmake_args }} ${{ matrix.cmake-args }}
+        run: |
+          # Ausgabe mitschneiden, damit Compilerfehler als Hinweis im Build erscheinen
+          if ! west build -s zmk/app -d "${{ env.build_dir }}" -b "${{ matrix.board }}" ${{ env.extra_west_args }} -- -DZMK_CONFIG=${{ env.base_dir }}/${{ env.CONFIG_PATH }} ${{ env.extra_cmake_args }} ${{ matrix.cmake-args }} > build.log 2>&1; then
+            cat build.log
+            grep -E "error|Error|undefined reference|warning: " build.log | grep -v "^--" | head -20 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          cat build.log
+          grep -E "warning: " build.log | grep -E "pairing|status_led|behavior_pairing|ble\.c" | head -10 | while IFS= read -r line; do echo "::warning::$line"; done
 
       - name: Check Legacy Pairing aktiv
         run: |
@@ -132,7 +144,7 @@ jobs:
             echo "SC_PAIR_ONLY ist noch aktiv" && exit 1
           fi
           echo "Legacy Pairing erlaubt"
-          for k in BT_DEVICE_NAME ZMK_KEYBOARD_NAME BT_SMP_SC_PAIR_ONLY BT_CTLR_PHY_2M BT_SMP BT_DEVICE_NAME_DYNAMIC; do
+          for k in BT_DEVICE_NAME BT_SMP_SC_PAIR_ONLY BT_CTLR_PHY_2M BT_REMOTE_PAIRING_WINDOW BT_REMOTE_STATUS_LED; do
             v=$(grep -E "^(# )?CONFIG_${k}[= ]" "${{ env.build_dir }}/zephyr/.config" | head -1)
             echo "::notice title=${k}::${v:-nicht gesetzt}"
           done

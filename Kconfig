@@ -1,3 +1,11 @@
+config BT_REMOTE_PAIRING_WINDOW
+    bool "Kopplungsmodus nur per Tastenkombi, Abbruch mit Play/Pause"
+    depends on ZMK_BLE
+    help
+      Die Remote ist ohne gekoppelten PC unsichtbar. Sichtbar wird sie nur nach
+      der Kopplungs-Kombi; Play/Pause, Ausschalten oder erfolgreiches Koppeln
+      beenden den Kopplungsmodus. Benoetigt den ZMK-Patch aus patches/.
+
 config BT_REMOTE_STATUS_LED
     bool "RGB-Status-LED: blau Kopplungsmodus, gruen verbunden, rot Akku schwach"
     depends on ZMK_BATTERY_REPORTING

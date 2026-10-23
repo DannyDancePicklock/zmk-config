@@ -1,0 +1,34 @@
+diff --git a/app/src/ble.c b/app/src/ble.c
+index 2611eee..ed11ff7 100644
+--- a/app/src/ble.c
++++ b/app/src/ble.c
+@@ -175,6 +175,11 @@ bool zmk_ble_profile_is_connected(uint8_t index) {
+     }                                                                                              \
+     advertising_status = ZMK_ADV_CONN;
+ 
++/* BT Remote: Hook, ob ein offenes (ungekoppeltes) Profil sichtbar sein darf.
++ * Standard wie ZMK: ja. Das BT-Remote-Modul ueberschreibt das und erlaubt es
++ * nur waehrend des per Tastenkombi gestarteten Kopplungsmodus. */
++__attribute__((weak)) bool zmk_ble_open_profile_adv_allowed(void) { return true; }
++
+ int update_advertising(void) {
+     int err = 0;
+     bt_addr_le_t *addr;
+@@ -182,7 +187,7 @@ int update_advertising(void) {
+     enum advertising_type desired_adv = ZMK_ADV_NONE;
+ 
+     if (zmk_ble_active_profile_is_open()) {
+-        desired_adv = ZMK_ADV_CONN;
++        desired_adv = zmk_ble_open_profile_adv_allowed() ? ZMK_ADV_CONN : ZMK_ADV_NONE;
+     } else if (!zmk_ble_active_profile_is_connected()) {
+         desired_adv = ZMK_ADV_CONN;
+         // Need to fix directed advertising for privacy centrals. See
+@@ -624,7 +629,7 @@ static void auth_cancel(struct bt_conn *conn) {
+ }
+ 
+ static bool pairing_allowed_for_current_profile(struct bt_conn *conn) {
+-    return zmk_ble_active_profile_is_open() ||
++    return (zmk_ble_active_profile_is_open() && zmk_ble_open_profile_adv_allowed()) ||
+            (IS_ENABLED(CONFIG_BT_SMP_ALLOW_UNAUTH_OVERWRITE) &&
+             bt_addr_le_cmp(zmk_ble_active_profile_addr(), bt_conn_get_dst(conn)) == 0);
+ }

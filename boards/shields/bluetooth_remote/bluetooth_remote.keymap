@@ -4,25 +4,31 @@
 
 / {
     behaviors {
-        /* Kopplung loeschen erst nach 2 s Halten.
-         * Kurz gedrueckt passiert nichts (tap = &none). */
-        bt_clr_hold: bt_clr_hold {
+        /* Kopplungsmodus starten (loescht den alten PC) */
+        pairing_start: pairing_start {
+            compatible = "zmk,behavior-bt-remote-pairing";
+            #binding-cells = <0>;
+        };
+
+        /* Erst nach 2 s Halten ausloesen, kurz gedrueckt passiert nichts */
+        pair_hold: pair_hold {
             compatible = "zmk,behavior-hold-tap";
             #binding-cells = <2>;
             flavor = "tap-preferred";
             tapping-term-ms = <2000>;
-            bindings = <&bt>, <&none>;
+            bindings = <&pairing_start>, <&none>;
         };
     };
 
     combos {
         compatible = "zmk,combos";
 
-        /* Kopplungsmodus: Play + Lauter zusammen 2 s halten */
+        /* Kopplungsmodus: Play + Lauter zusammen 2 s halten.
+         * Abbrechen: Play kurz druecken. */
         combo_bt_clear {
             timeout-ms = <150>;
             key-positions = <0 3>;
-            bindings = <&bt_clr_hold BT_CLR 0>;
+            bindings = <&pair_hold 0 0>;
         };
     };
 

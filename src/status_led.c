@@ -1,7 +1,9 @@
 /*
  * RGB-Status-LED fuer die BT Remote
  *
- * - Kopplungsmodus (Profil offen, wartet auf neues Geraet): blau, schnelles Blinken
+ * - Kopplungsmodus: blau, schnelles Blinken. Mit CONFIG_BT_REMOTE_PAIRING_WINDOW
+ *   nur waehrend des per Kombi gestarteten Kopplungsmodus (siehe pairing.c),
+ *   sonst immer, wenn kein PC gespeichert ist.
  * - Verbindung hergestellt: gruen, einmal kurz aufleuchten
  * - Akku schwach: rot, kurzer Blitz in regelmaessigen Abstaenden
  * - Sonst (verbunden, getrennt oder Schlaf): aus
@@ -21,6 +23,8 @@
 #include <zmk/events/ble_active_profile_changed.h>
 #include <zmk/events/activity_state_changed.h>
 #include <zmk/events/battery_state_changed.h>
+
+#include "pairing.h"
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
@@ -97,7 +101,11 @@ static void lowbat_handler(struct k_work *work) {
 /* Aktuellen Bluetooth-Zustand auswerten und LED-Modus setzen */
 static void update_handler(struct k_work *work) {
     bool connected = zmk_ble_active_profile_is_connected();
+#if IS_ENABLED(CONFIG_BT_REMOTE_PAIRING_WINDOW)
+    bool open = zmk_ble_active_profile_is_open() && bt_remote_pairing_active();
+#else
     bool open = zmk_ble_active_profile_is_open();
+#endif
 
     if (connected) {
         pairing_active = false;
@@ -115,7 +123,7 @@ static void update_handler(struct k_work *work) {
             k_work_reschedule(&blink_work, K_MSEC(PAIRING_BLINK_MS));
         }
     } else {
-        /* Getrennt, aber gekoppelt: LED aus, spart Akku */
+        /* Getrennt, gekoppelt oder Kopplungsmodus abgebrochen: LED aus */
         pairing_active = false;
         flash_active = false;
         k_work_cancel_delayable(&blink_work);
@@ -124,6 +132,9 @@ static void update_handler(struct k_work *work) {
 
     was_connected = connected;
 }
+
+/* Von pairing.c aufgerufen, wenn der Kopplungsmodus startet oder endet */
+void bt_remote_status_led_refresh(void) { k_work_reschedule(&update_work, K_NO_WAIT); }
 
 static void battery_update(uint8_t soc) {
     if (!battery_low && soc <= LOWBAT_PERCENT) {
