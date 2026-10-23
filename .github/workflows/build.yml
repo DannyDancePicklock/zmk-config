@@ -152,38 +152,28 @@ jobs:
       - name: Check Kopplungsmodus-Code in der Firmware
         run: |
           cfg="${{ env.build_dir }}/zephyr/.config"
+          elf="${{ env.build_dir }}/zephyr/zephyr.elf"
           if ! grep -q "^CONFIG_BT_REMOTE_PAIRING_WINDOW=y" "$cfg"; then
             echo "Kopplungsmodus-Modul nicht aktiv in diesem Build, Pruefung uebersprungen"; exit 0
           fi
-          python3 - "${{ env.build_dir }}/zephyr/zephyr.elf" <<'PY'
-          import sys
-          from elftools.elf.elffile import ELFFile
-          with open(sys.argv[1], "rb") as f:
-              elf = ELFFile(f)
-              symtab = elf.get_section_by_name(".symtab")
-              found = {}
-              for sym in symtab.iter_symbols():
-                  if sym.name in ("zmk_ble_open_profile_adv_allowed", "bt_remote_pairing_start",
-                                  "bt_remote_pairing_cancel", "bt_remote_status_led_refresh"):
-                      found.setdefault(sym.name, []).append(sym["st_info"]["bind"])
-              data = open(sys.argv[1], "rb").read()
-          ok = True
-          for name in ("zmk_ble_open_profile_adv_allowed", "bt_remote_pairing_start",
-                       "bt_remote_pairing_cancel", "bt_remote_status_led_refresh"):
-              binds = found.get(name)
-              print(f"::notice title={name}::{binds}")
-              if not binds:
-                  ok = False
-          if found.get("zmk_ble_open_profile_adv_allowed") != ["STB_GLOBAL"]:
-              print("::error::Hook ist nicht durch das Modul ueberschrieben (noch weak)")
-              ok = False
-          if b"pairing_start" not in data:
-              print("::error::Behavior pairing_start fehlt in der Firmware")
-              ok = False
-          else:
-              print("::notice title=Behavior::pairing_start ist in der Firmware")
-          sys.exit(0 if ok else 1)
-          PY
+          NM=$(command -v arm-zephyr-eabi-nm || find / -name "arm-zephyr-eabi-nm" -type f 2>/dev/null | head -1)
+          if [ -z "$NM" ]; then echo "::error::nm nicht gefunden"; exit 1; fi
+          ok=1
+          for sym in zmk_ble_open_profile_adv_allowed bt_remote_pairing_start bt_remote_pairing_cancel bt_remote_status_led_refresh; do
+            line=$("$NM" "$elf" | grep " ${sym}$" | head -1)
+            echo "::notice title=${sym}::${line:-FEHLT}"
+            [ -n "$line" ] || ok=0
+          done
+          # T = vom Modul ueberschrieben, W = noch der schwache ZMK-Standard
+          if ! "$NM" "$elf" | grep -q " T zmk_ble_open_profile_adv_allowed$"; then
+            echo "::error::Hook ist nicht durch das Modul ueberschrieben"; ok=0
+          fi
+          if grep -a -q "pairing_start" "$elf"; then
+            echo "::notice title=Behavior::pairing_start ist in der Firmware"
+          else
+            echo "::error::Behavior pairing_start fehlt in der Firmware"; ok=0
+          fi
+          [ "$ok" = 1 ]
 
       - name: ${{ env.display_name }} Kconfig file
         run: |
