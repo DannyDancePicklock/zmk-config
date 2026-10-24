@@ -133,6 +133,9 @@ static void update_handler(struct k_work *work) {
     was_connected = connected;
 }
 
+/* Von blackbox.c aufgerufen: Markierung gesetzt -> einmal gelb blitzen */
+void bt_remote_status_led_marker(void) { flash(COLOR_RED | COLOR_GREEN, 600); }
+
 /* Von pairing.c aufgerufen, wenn der Kopplungsmodus startet oder endet */
 void bt_remote_status_led_refresh(void) { k_work_reschedule(&update_work, K_NO_WAIT); }
 

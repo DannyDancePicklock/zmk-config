@@ -29,6 +29,7 @@
 #include <zmk/events/keycode_state_changed.h>
 
 #include "pairing.h"
+#include "blackbox.h"
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
@@ -55,6 +56,7 @@ void bt_remote_pairing_start(void) {
     /* Erst freigeben, dann loeschen: zmk_ble_clear_bonds() startet am Ende
      * selbst das Advertising neu und fragt dabei den Hook oben ab. */
     pairing_window = true;
+    bt_remote_blackbox_pairing(BB_PAIRWIN_START);
     zmk_ble_clear_bonds();
 
     notify_led();
@@ -76,6 +78,7 @@ void bt_remote_pairing_cancel(void) {
 
     LOG_INF("Kopplungsmodus abgebrochen");
     pairing_window = false;
+    bt_remote_blackbox_pairing(BB_PAIRWIN_CANCEL);
 
     if (zmk_ble_active_profile_is_open()) {
         /* Ein PC, der gerade mitten im Koppeln steckt, wird getrennt */
@@ -104,6 +107,7 @@ static int pairing_listener(const zmk_event_t *eh) {
         if (pairing_window && !zmk_ble_active_profile_is_open()) {
             LOG_INF("Kopplung erfolgreich, Kopplungsmodus beendet");
             pairing_window = false;
+            bt_remote_blackbox_pairing(BB_PAIRWIN_DONE);
             notify_led();
         }
     }

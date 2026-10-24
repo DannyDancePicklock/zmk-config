@@ -1,0 +1,33 @@
+/*
+ * Blackbox-Build:
+ * - USB-Konsole (wie zmk-usb-logging) zum Auslesen in PuTTY
+ * - 128 KB am Ende des Programmbereichs als Blackbox-Speicher
+ *   (Programm: 0x26000-0xCC000, Blackbox: 0xCC000-0xEC000,
+ *    danach unveraendert Einstellungen und Bootloader)
+ */
+
+/ {
+    chosen {
+        zephyr,console = &bb_usb_uart;
+        zephyr,shell-uart = &bb_usb_uart;
+    };
+};
+
+&zephyr_udc0 {
+    bb_usb_uart: bb_usb_uart {
+        compatible = "zephyr,cdc-acm-uart";
+    };
+};
+
+&flash0 {
+    partitions {
+        code_partition: partition@26000 {
+            reg = <0x00026000 0x000a6000>;
+        };
+
+        blackbox_partition: partition@cc000 {
+            label = "blackbox";
+            reg = <0x000cc000 0x00020000>;
+        };
+    };
+};

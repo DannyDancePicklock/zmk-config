@@ -37,3 +37,9 @@ endif
 config BT_REMOTE_DIAG
     bool "Diagnose: Bluetooth-Ereignisse per USB-Log mitschreiben"
     depends on BT
+
+config BT_REMOTE_BLACKBOX
+    bool "Blackbox: Ereignisse ohne Kabel im Flash mitschreiben, per PuTTY auslesen"
+    depends on BT && FLASH_MAP && SETTINGS
+    help
+      Benoetigt den Flash-Bereich blackbox_partition (Snippet "blackbox").
