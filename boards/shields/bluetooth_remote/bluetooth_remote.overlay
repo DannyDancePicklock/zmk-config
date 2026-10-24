@@ -26,7 +26,7 @@
 
 /* Solange die RGB-LED noch nicht eingebaut ist, laeuft "blau" ueber die
  * interne blaue LED des Boards (P0.15). Wenn die RGB-LED drin ist: auf 0 setzen. */
-#define USE_ONBOARD_BLUE_LED 1
+#define USE_ONBOARD_BLUE_LED 0
 
 /* D10 und D16 sind beim nRF52840 die NFC-Pins (P0.09/P0.10).
  * Damit sie als normale GPIOs funktionieren, muss NFC abgeschaltet werden. */
