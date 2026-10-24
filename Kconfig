@@ -33,3 +33,7 @@ config BT_REMOTE_STATUS_LED_LOWBAT_INTERVAL_S
     default 10
 
 endif
+
+config BT_REMOTE_DIAG
+    bool "Diagnose: Bluetooth-Ereignisse per USB-Log mitschreiben"
+    depends on BT
