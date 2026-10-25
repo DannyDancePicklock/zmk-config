@@ -9,6 +9,9 @@
  * - Sonst (verbunden, getrennt oder Schlaf): aus
  *
  * Prioritaet: Kopplungsmodus > Verbindungsblitz > Akku-Warnung
+ *
+ * Testmodus (CONFIG_BT_REMOTE_STATUS_LED_DEBUG): Solange nicht verbunden,
+ * leuchtet rot dauerhaft. Beim Verbinden kurz gruen, dann aus.
  */
 
 #include <zephyr/kernel.h>
@@ -58,6 +61,16 @@ static struct k_work_delayable blink_work;
 static struct k_work_delayable update_work;
 static struct k_work_delayable lowbat_work;
 
+/* Farbe, wenn gerade nichts blinkt: im Testmodus rot, solange nicht verbunden */
+static enum led_color idle_color(void) {
+#if IS_ENABLED(CONFIG_BT_REMOTE_STATUS_LED_DEBUG)
+    if (!zmk_ble_active_profile_is_connected()) {
+        return COLOR_RED;
+    }
+#endif
+    return COLOR_OFF;
+}
+
 static void led_show(enum led_color color) {
     gpio_pin_set_dt(&led_red, (color & COLOR_RED) != 0);
     gpio_pin_set_dt(&led_green, (color & COLOR_GREEN) != 0);
@@ -84,7 +97,7 @@ static void blink_handler(struct k_work *work) {
     }
 
     flash_active = false;
-    led_show(COLOR_OFF);
+    led_show(idle_color());
 }
 
 /* Akku-Warnung: regelmaessig kurz rot blitzen, solange der Akku schwach ist */
@@ -127,7 +140,7 @@ static void update_handler(struct k_work *work) {
         pairing_active = false;
         flash_active = false;
         k_work_cancel_delayable(&blink_work);
-        led_show(COLOR_OFF);
+        led_show(idle_color());
     }
 
     was_connected = connected;

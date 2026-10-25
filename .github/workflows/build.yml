@@ -120,6 +120,9 @@ jobs:
             echo "Patch fehlgeschlagen" && exit 1
           fi
           echo "BT_SMP_SC_PAIR_ONLY aus ZMK entfernt"
+          # 3) Keine aufgestauten Tastendruecke nach dem Wiederverbinden
+          python3 "${GITHUB_WORKSPACE}/patches/hog_purge.py" zmk/app/src/hog.c
+          grep -c "k_msgq_purge" zmk/app/src/hog.c
 
       - name: West Zephyr export
         working-directory: ${{ env.base_dir }}
@@ -144,7 +147,7 @@ jobs:
             echo "SC_PAIR_ONLY ist noch aktiv" && exit 1
           fi
           echo "Legacy Pairing erlaubt"
-          for k in BT_REMOTE_BLACKBOX BT_REMOTE_DIAG UART_LINE_CTRL BT_DEVICE_NAME BT_SMP_SC_PAIR_ONLY BT_CTLR_PHY_2M BT_REMOTE_PAIRING_WINDOW CLOCK_CONTROL_NRF_K32SRC_RC CLOCK_CONTROL_NRF_K32SRC_XTAL CLOCK_CONTROL_NRF_ACCURACY CLOCK_CONTROL_NRF_CALIBRATION; do
+          for k in BT_CTLR_TX_PWR_PLUS_8 BT_REMOTE_STATUS_LED_DEBUG BT_REMOTE_BLACKBOX BT_REMOTE_DIAG UART_LINE_CTRL BT_DEVICE_NAME BT_SMP_SC_PAIR_ONLY BT_CTLR_PHY_2M BT_REMOTE_PAIRING_WINDOW CLOCK_CONTROL_NRF_K32SRC_RC CLOCK_CONTROL_NRF_K32SRC_XTAL CLOCK_CONTROL_NRF_ACCURACY CLOCK_CONTROL_NRF_CALIBRATION; do
             v=$(grep -E "^(# )?CONFIG_${k}[= ]" "${{ env.build_dir }}/zephyr/.config" | head -1)
             echo "::notice title=${k}::${v:-nicht gesetzt}"
           done
