@@ -114,9 +114,9 @@ static int power_boot_check(void) {
     return 0;
 }
 
-/* Vor dem externen Flash-Speicher (Prio 80) pruefen, damit der beim
+/* Vor dem externen Flash-Speicher (QSPI, Prio 41) pruefen, damit der beim
  * sofortigen Wieder-Ausschalten im Stromsparmodus bleibt */
-SYS_INIT(power_boot_check, POST_KERNEL, 45);
+SYS_INIT(power_boot_check, POST_KERNEL, 40);
 
 void bt_remote_power_off(void) {
     LOG_INF("Ausschalten");
