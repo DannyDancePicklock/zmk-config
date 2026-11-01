@@ -98,4 +98,25 @@
     zephyr,user {
         charge-gpios = <&gpio0 17 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
     };
+
+    /* Ein/Aus ohne Schalter (src/power.c): Nur Play weckt die Remote aus
+     * dem ausgeschalteten Zustand. Play ist gleichzeitig ganz normal Taste 0
+     * im kscan oben. */
+    power_keys {
+        compatible = "gpio-keys";
+        power_key: power_key {
+            gpios = <&xiao_d 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+        };
+    };
+
+    power_waker: power_waker {
+        compatible = "zmk,gpio-key-wakeup-trigger";
+        trigger = <&power_key>;
+        wakeup-source;
+    };
+
+    soft_off_wakers {
+        compatible = "zmk,soft-off-wakeup-sources";
+        wakeup-sources = <&power_waker>;
+    };
 };

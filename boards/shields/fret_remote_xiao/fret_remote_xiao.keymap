@@ -18,6 +18,21 @@
             tapping-term-ms = <2000>;
             bindings = <&pairing_start>, <&none>;
         };
+
+        /* Ausschalten (rot blink, blink, ausfaden). Einschalten: Play 3 s */
+        power_off: power_off {
+            compatible = "zmk,behavior-bt-remote-power-off";
+            #binding-cells = <0>;
+        };
+
+        /* Erst nach 3 s Halten ausloesen, kurz gedrueckt passiert nichts */
+        off_hold: off_hold {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "tap-preferred";
+            tapping-term-ms = <3000>;
+            bindings = <&power_off>, <&none>;
+        };
     };
 
     combos {
@@ -29,6 +44,13 @@
             timeout-ms = <150>;
             key-positions = <0 1>;
             bindings = <&pair_hold 0 0>;
+        };
+
+        /* Ausschalten: Play + Unten zusammen 3 s halten */
+        combo_power_off {
+            timeout-ms = <150>;
+            key-positions = <0 3>;
+            bindings = <&off_hold 0 0>;
         };
     };
 

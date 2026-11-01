@@ -33,6 +33,7 @@
 #include <zmk/events/battery_state_changed.h>
 
 #include "pairing.h"
+#include "status_led.h"
 
 /* Ladeanzeige nur, wenn das Board einen CHG-Pin im Devicetree hat
  * (zephyr,user { charge-gpios = ... }) und USB in ZMK aktiv ist. */
@@ -71,6 +72,7 @@ static bool pairing_active;
 static bool pairing_led_on;
 static bool flash_active;
 static bool battery_low;
+static bool leds_locked;
 
 static struct k_work_delayable blink_work;
 static struct k_work_delayable update_work;
@@ -116,10 +118,19 @@ static enum led_color idle_color(void) {
     return COLOR_OFF;
 }
 
-static void led_show(enum led_color color) {
+/* Direkt schalten, ohne Ruecksicht auf die Sperre (nur fuer Animationen) */
+static void led_raw(enum led_color color) {
     gpio_pin_set_dt(&led_red, (color & COLOR_RED) != 0);
     gpio_pin_set_dt(&led_green, (color & COLOR_GREEN) != 0);
     gpio_pin_set_dt(&led_blue, (color & COLOR_BLUE) != 0);
+}
+
+static void led_show(enum led_color color) {
+    /* Waehrend der Ausschalt-Animation gehoert die LED nur ihr */
+    if (leds_locked) {
+        return;
+    }
+    led_raw(color);
 }
 
 /* Kurzes einmaliges Aufleuchten in einer Farbe (nicht im Kopplungsmodus) */
@@ -224,6 +235,83 @@ static void update_handler(struct k_work *work) {
     }
 
     was_connected = connected;
+}
+
+/* ---- Ein/Aus-Animationen (siehe power.c) ---------------------------------- */
+
+#define ANIM_BLINK_ON_MS 150
+#define ANIM_BLINK_OFF_MS 150
+
+/* Ausfaden per Software-PWM: 1 kHz, Helligkeit quadratisch runter, damit es
+ * fuers Auge gleichmaessig dunkler wird. Blockiert ca. 0,8 s - danach geht
+ * die Remote ohnehin aus. */
+#define FADE_STEPS 40
+#define FADE_STEP_MS 20
+#define FADE_PERIOD_US 1000
+
+static void fade_out(const struct gpio_dt_spec *led) {
+    for (int s = FADE_STEPS; s > 0; s--) {
+        uint32_t on_us = (uint32_t)FADE_PERIOD_US * s * s / (FADE_STEPS * FADE_STEPS);
+
+        for (int p = 0; p < FADE_STEP_MS * 1000 / FADE_PERIOD_US; p++) {
+            gpio_pin_set_dt(led, 1);
+            k_busy_wait(on_us);
+            gpio_pin_set_dt(led, 0);
+            k_busy_wait(FADE_PERIOD_US - on_us);
+        }
+    }
+}
+
+static void blink_raw(enum led_color color, int count) {
+    for (int i = 0; i < count; i++) {
+        led_raw(color);
+        k_msleep(ANIM_BLINK_ON_MS);
+        led_raw(COLOR_OFF);
+        k_msleep(ANIM_BLINK_OFF_MS);
+    }
+}
+
+/* Ausschalten: rot blink, blink, ausfaden. Danach bleibt die LED gesperrt
+ * und aus, bis bt_remote_status_led_unlock() kommt (nur wenn das
+ * Ausschalten schiefgeht). */
+void bt_remote_status_led_power_off_animation(void) {
+    leds_locked = true;
+    pairing_active = false;
+    flash_active = false;
+    k_work_cancel_delayable(&blink_work);
+    k_work_cancel_delayable(&update_work);
+    k_work_cancel_delayable(&lowbat_work);
+#if HAS_CHARGE_STATUS
+    k_work_cancel_delayable(&charge_work);
+#endif
+
+    led_raw(COLOR_OFF);
+    k_msleep(ANIM_BLINK_OFF_MS);
+    blink_raw(COLOR_RED, 2);
+    fade_out(&led_red);
+    led_raw(COLOR_OFF);
+}
+
+void bt_remote_status_led_unlock(void) {
+    leds_locked = false;
+    k_work_reschedule(&update_work, K_NO_WAIT);
+#if HAS_CHARGE_STATUS
+    k_work_reschedule(&charge_work, K_NO_WAIT);
+#endif
+}
+
+/* Einschalten: 2x gruen. Laeuft ganz frueh beim Start (vor status_led_init),
+ * deshalb werden die Pins hier selbst eingerichtet. */
+void bt_remote_status_led_power_on_blink(void) {
+    const struct gpio_dt_spec *leds[] = {&led_red, &led_green, &led_blue};
+
+    for (int i = 0; i < ARRAY_SIZE(leds); i++) {
+        if (!gpio_is_ready_dt(leds[i])) {
+            return;
+        }
+        gpio_pin_configure_dt(leds[i], GPIO_OUTPUT_INACTIVE);
+    }
+    blink_raw(COLOR_GREEN, 2);
 }
 
 /* Von blackbox.c aufgerufen: Markierung gesetzt -> einmal gelb blitzen */

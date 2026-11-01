@@ -51,3 +51,12 @@ config BT_REMOTE_BLACKBOX
     depends on BT && FLASH_MAP && SETTINGS
     help
       Benoetigt den Flash-Bereich blackbox_partition (Snippet "blackbox").
+
+config BT_REMOTE_POWER_OFF
+    bool "Ein/Aus per Tastenkombi statt Schalter (Soft Off)"
+    depends on ZMK_PM_SOFT_OFF
+    help
+      Aus: Hold-Tap-Kombi in der Keymap (Behavior "zmk,behavior-bt-remote-power-off"),
+      LED rot blink, blink, ausfaden. Ein: Play 3 s halten, LED 2x gruen.
+      Benoetigt im Overlay den Knoten power_key (Play-Taste als gpio-keys)
+      und soft_off_wakers mit dieser Taste als Wecker.

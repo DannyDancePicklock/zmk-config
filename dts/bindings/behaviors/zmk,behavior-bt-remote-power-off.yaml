@@ -1,0 +1,5 @@
+description: BT Remote - ausschalten (Animation, dann Soft Off)
+
+compatible: "zmk,behavior-bt-remote-power-off"
+
+include: zero_param.yaml
