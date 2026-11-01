@@ -1,0 +1,49 @@
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/bt.h>
+
+/ {
+    behaviors {
+        /* Kopplungsmodus starten (loescht den alten PC) */
+        pairing_start: pairing_start {
+            compatible = "zmk,behavior-bt-remote-pairing";
+            #binding-cells = <0>;
+        };
+
+        /* Erst nach 2 s Halten ausloesen, kurz gedrueckt passiert nichts */
+        pair_hold: pair_hold {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "tap-preferred";
+            tapping-term-ms = <2000>;
+            bindings = <&pairing_start>, <&none>;
+        };
+    };
+
+    combos {
+        compatible = "zmk,combos";
+
+        /* Kopplungsmodus: Play + Oben zusammen 2 s halten.
+         * Abbrechen: Play kurz druecken. */
+        combo_pairing {
+            timeout-ms = <150>;
+            key-positions = <0 1>;
+            bindings = <&pair_hold 0 0>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+
+        /* Positionen: 0 Play (Mitte), 1 Oben, 2 Zurueck (links),
+         *             3 Unten, 4 Weiter (rechts) */
+        default_layer {
+            bindings = <
+                &kp C_PP   &kp KP_PLUS   &kp C_PREV   &kp KP_MINUS   &kp C_NEXT
+            >;
+
+            /* Rad: im Uhrzeigersinn lauter, dagegen leiser */
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>;
+        };
+    };
+};

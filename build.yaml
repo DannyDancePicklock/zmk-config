@@ -32,3 +32,16 @@
     shield: bluetooth_remote
     snippet: blackbox
     artifact-name: bluetooth_remote_BLACKBOX
+
+  # FRET Remote V1 auf dem Seeed XIAO nRF52840 (ANO-Rad + RGB-LED)
+  - board: seeeduino_xiao_ble
+    shield: fret_remote_xiao
+    artifact-name: fret-remote-v1-xiao-0.1.0
+  - board: seeeduino_xiao_ble
+    shield: settings_reset
+    artifact-name: settings-reset-xiao-0.1.0
+  - board: seeeduino_xiao_ble
+    shield: fret_remote_xiao
+    snippet: zmk-usb-logging
+    cmake-args: -DCONFIG_BT_REMOTE_DIAG=y -DCONFIG_BT_SMP_LOG_LEVEL_DBG=y -DCONFIG_LOG_BUFFER_SIZE=8192 -DCONFIG_LOG_PROCESS_THREAD_STARTUP_DELAY_MS=3000
+    artifact-name: fret-remote-v1-xiao-0.1.0-DIAGNOSE

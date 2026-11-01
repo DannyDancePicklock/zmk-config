@@ -17,7 +17,8 @@ config BT_REMOTE_STATUS_LED_DEBUG
     help
       Nur fuer die Fehlersuche: Ist die Remote nicht verbunden, leuchtet rot
       dauerhaft. Beim Verbinden kurz gruen, dann aus. Kostet Akku, fuer die
-      Serie wieder abschalten.
+      Serie wieder abschalten. Auf Boards mit Ladeanzeige gilt das nur im
+      Akkubetrieb; am USB-Kabel zeigt rot das Laden an.
 
 config BT_REMOTE_STATUS_LED_CONNECT_MS
     int "Dauer des gruenen Aufleuchtens nach dem Verbinden (ms)"

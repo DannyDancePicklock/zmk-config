@@ -1,0 +1,9 @@
+file_format: "1"
+id: fret_remote_xiao
+name: FRET Remote V1 (XIAO nRF52840)
+type: shield
+url: https://github.com/DannyDancePicklock/zmk-config
+features:
+  - keys
+  - encoder
+requires: [seeed_xiao]

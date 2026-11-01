@@ -1,0 +1,6 @@
+if SHIELD_FRET_REMOTE_XIAO
+
+config ZMK_KEYBOARD_NAME
+    default "FRET Remote V1"
+
+endif # SHIELD_FRET_REMOTE_XIAO

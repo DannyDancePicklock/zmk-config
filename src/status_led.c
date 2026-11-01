@@ -8,10 +8,15 @@
  * - Akku schwach: rot, kurzer Blitz in regelmaessigen Abstaenden
  * - Sonst (verbunden, getrennt oder Schlaf): aus
  *
- * Prioritaet: Kopplungsmodus > Verbindungsblitz > Akku-Warnung
+ * - Laden (nur Boards mit Ladeanzeige, z. B. XIAO nRF52840): Solange USB
+ *   steckt, leuchtet rot dauerhaft, waehrend der Akku geladen wird, und geht
+ *   aus, wenn er voll ist. Die Akku-Warnung ist am Kabel stumm.
+ *
+ * Prioritaet: Kopplungsmodus > Verbindungsblitz > Laden > Akku-Warnung
  *
  * Testmodus (CONFIG_BT_REMOTE_STATUS_LED_DEBUG): Solange nicht verbunden,
- * leuchtet rot dauerhaft. Beim Verbinden kurz gruen, dann aus.
+ * leuchtet rot dauerhaft. Beim Verbinden kurz gruen, dann aus. Mit
+ * Ladeanzeige gilt das nur im Akkubetrieb, am Kabel zeigt rot das Laden.
  */
 
 #include <zephyr/kernel.h>
@@ -28,6 +33,16 @@
 #include <zmk/events/battery_state_changed.h>
 
 #include "pairing.h"
+
+/* Ladeanzeige nur, wenn das Board einen CHG-Pin im Devicetree hat
+ * (zephyr,user { charge-gpios = ... }) und USB in ZMK aktiv ist. */
+#if DT_NODE_HAS_PROP(DT_PATH(zephyr_user), charge_gpios) && IS_ENABLED(CONFIG_ZMK_USB)
+#define HAS_CHARGE_STATUS 1
+#include <zmk/usb.h>
+#include <zmk/events/usb_conn_state_changed.h>
+#else
+#define HAS_CHARGE_STATUS 0
+#endif
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
@@ -61,8 +76,38 @@ static struct k_work_delayable blink_work;
 static struct k_work_delayable update_work;
 static struct k_work_delayable lowbat_work;
 
-/* Farbe, wenn gerade nichts blinkt: im Testmodus rot, solange nicht verbunden */
+#if HAS_CHARGE_STATUS
+/* Abfrage-Takt des CHG-Pins, solange USB steckt */
+#define CHARGE_POLL_MS 2000
+
+static const struct gpio_dt_spec charge_pin = GPIO_DT_SPEC_GET(DT_PATH(zephyr_user), charge_gpios);
+static bool usb_powered;
+static bool charging;
+
+/* Statisch angelegt, damit ein fruehes USB-Ereignis nie auf eine
+ * unfertige Arbeit trifft */
+static void charge_handler(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(charge_work, charge_handler);
+#endif
+
+/* Haengt die Remote gerade am USB-Kabel? (nur mit Ladeanzeige relevant) */
+static bool on_usb_power(void) {
+#if HAS_CHARGE_STATUS
+    return usb_powered;
+#else
+    return false;
+#endif
+}
+
+/* Farbe, wenn gerade nichts blinkt:
+ * - am USB-Kabel (mit Ladeanzeige): rot = laedt, aus = voll
+ * - im Testmodus: rot, solange nicht verbunden */
 static enum led_color idle_color(void) {
+#if HAS_CHARGE_STATUS
+    if (usb_powered) {
+        return charging ? COLOR_RED : COLOR_OFF;
+    }
+#endif
 #if IS_ENABLED(CONFIG_BT_REMOTE_STATUS_LED_DEBUG)
     if (!zmk_ble_active_profile_is_connected()) {
         return COLOR_RED;
@@ -105,11 +150,46 @@ static void lowbat_handler(struct k_work *work) {
     if (!battery_low) {
         return;
     }
-    if (!pairing_active && !flash_active) {
+    /* Am Ladekabel keine Warnung, da zeigt rot schon das Laden */
+    if (!pairing_active && !flash_active && !on_usb_power()) {
         flash(COLOR_RED, LOWBAT_FLASH_MS);
     }
     k_work_reschedule(&lowbat_work, K_MSEC(LOWBAT_INTERVAL_MS));
 }
+
+#if HAS_CHARGE_STATUS
+/* Ruhefarbe neu setzen, wenn gerade nichts blinkt */
+static void apply_idle(void) {
+    if (!pairing_active && !flash_active) {
+        led_show(idle_color());
+    }
+}
+
+/* Ladezustand pruefen: Nur solange USB steckt, wird der CHG-Pin gelesen
+ * (alle 2 s). Ohne Kabel ist der Pin abgeklemmt und kostet nichts. */
+static void charge_handler(struct k_work *work) {
+    bool powered = zmk_usb_is_powered();
+    bool now_charging = false;
+
+    if (powered) {
+        if (!usb_powered) {
+            gpio_pin_configure_dt(&charge_pin, GPIO_INPUT);
+        }
+        now_charging = gpio_pin_get_dt(&charge_pin) > 0;
+        k_work_reschedule(&charge_work, K_MSEC(CHARGE_POLL_MS));
+    } else if (usb_powered) {
+        gpio_pin_configure_dt(&charge_pin, GPIO_DISCONNECTED);
+    }
+
+    if (powered != usb_powered || now_charging != charging) {
+        LOG_INF("Status-LED: USB %s, %s", powered ? "steckt" : "ab",
+                now_charging ? "laedt" : "laedt nicht");
+        usb_powered = powered;
+        charging = now_charging;
+        apply_idle();
+    }
+}
+#endif
 
 /* Aktuellen Bluetooth-Zustand auswerten und LED-Modus setzen */
 static void update_handler(struct k_work *work) {
@@ -172,6 +252,9 @@ static int status_led_listener(const zmk_event_t *eh) {
             k_work_cancel_delayable(&blink_work);
             k_work_cancel_delayable(&update_work);
             k_work_cancel_delayable(&lowbat_work);
+#if HAS_CHARGE_STATUS
+            k_work_cancel_delayable(&charge_work);
+#endif
             led_show(COLOR_OFF);
         }
         return ZMK_EV_EVENT_BUBBLE;
@@ -182,6 +265,14 @@ static int status_led_listener(const zmk_event_t *eh) {
         battery_update(bat->state_of_charge);
         return ZMK_EV_EVENT_BUBBLE;
     }
+
+#if HAS_CHARGE_STATUS
+    if (as_zmk_usb_conn_state_changed(eh)) {
+        /* Kabel rein oder raus: Ladezustand sofort neu pruefen */
+        k_work_reschedule(&charge_work, K_NO_WAIT);
+        return ZMK_EV_EVENT_BUBBLE;
+    }
+#endif
 
     if (as_zmk_ble_active_profile_changed(eh)) {
         k_work_reschedule(&update_work, K_NO_WAIT);
@@ -194,6 +285,9 @@ ZMK_LISTENER(status_led, status_led_listener);
 ZMK_SUBSCRIPTION(status_led, zmk_ble_active_profile_changed);
 ZMK_SUBSCRIPTION(status_led, zmk_activity_state_changed);
 ZMK_SUBSCRIPTION(status_led, zmk_battery_state_changed);
+#if HAS_CHARGE_STATUS
+ZMK_SUBSCRIPTION(status_led, zmk_usb_conn_state_changed);
+#endif
 
 static int status_led_init(void) {
     const struct gpio_dt_spec *leds[] = {&led_red, &led_green, &led_blue};
@@ -213,6 +307,16 @@ static int status_led_init(void) {
     /* Nach dem Start kurz warten, bis Bluetooth und die gespeicherten
      * Profile geladen sind, dann den Anfangszustand pruefen. */
     k_work_reschedule(&update_work, K_SECONDS(1));
+
+#if HAS_CHARGE_STATUS
+    if (!gpio_is_ready_dt(&charge_pin)) {
+        LOG_ERR("Status-LED: Lade-Pin nicht bereit");
+    } else {
+        /* Erst mal abgeklemmt, gelesen wird nur am USB-Kabel */
+        gpio_pin_configure_dt(&charge_pin, GPIO_DISCONNECTED);
+        k_work_reschedule(&charge_work, K_SECONDS(1));
+    }
+#endif
 
     return 0;
 }
